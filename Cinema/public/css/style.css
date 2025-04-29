@@ -1,0 +1,14 @@
+a:focus, a:active {
+    outline: none;
+    border: none;
+}
+
+.image-container {
+    width: 300px;
+    height: 200px;
+    overflow: hidden;
+}
+.image-container img {
+    width: 100%;
+    height: auto;
+}

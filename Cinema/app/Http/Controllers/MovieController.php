@@ -4,6 +4,8 @@ namespace App\Http\Controllers;
 
 use Illuminate\Http\Request;
 use App\Models\Movie;
+use App\Models\Category;
+use App\Models\Anime;
 
 class MovieController extends Controller
 {
@@ -12,8 +14,9 @@ class MovieController extends Controller
      */
     public function index()
     {
-       $movies = Movie::orderBy('name');
-       return view('movies.list', compact('movies'));
+        $movies = Movie::orderBy('name')->get();
+        $animes = Anime::orderBy('name')->get();
+       return view('movies.list', compact('movies','animes'));
     }
 
     /**
@@ -21,7 +24,8 @@ class MovieController extends Controller
      */
     public function create()
     {
-        //
+        $categories = Category::all();
+        return view('movies.create', compact('categories'));
     }
 
     /**
@@ -35,17 +39,18 @@ class MovieController extends Controller
     /**
      * Display the specified resource.
      */
-    public function show(string $id)
+    public function show(Movie $movie)
     {
-        //
+        return view('movies.show',compact('movie'));
     }
 
     /**
      * Show the form for editing the specified resource.
      */
-    public function edit(string $id)
+    public function edit(Movie $movie)
     {
-        //
+        $categories = Category::all();
+        return view('movies.edit', compact('movie', 'categories'));
     }
 
     /**
@@ -59,8 +64,17 @@ class MovieController extends Controller
     /**
      * Remove the specified resource from storage.
      */
-    public function destroy(string $id)
+    public function destroy(Movie $movie)
     {
-        //
+        // if (Gate::denies('delete', $movie)) {
+        //     return redirect()->route('movies.index')->with('error', 'Vous pouvez pas supprimez !!');
+        // }else{  
+        //     $movie->categories()->detach();
+        //     $movie->delete();
+        //     return redirect()->route('movies.index');
+        // }
+        $movie->categories()->detach();
+        $movie->delete();
+        return redirect()->route('movies.index');
     }
 }

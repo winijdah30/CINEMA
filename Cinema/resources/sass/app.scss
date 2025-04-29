@@ -1,0 +1,48 @@
+$primary: rgb(61, 122, 120);
+$body-bg: rgb(74, 54, 54);
+$body-color: white;
+@import "bootstrap";
+
+
+.movie-carousel {
+    scrollbar-width: none; /* Firefox */
+    -ms-overflow-style: none; /* IE/Edge */
+}
+.movie-carousel::-webkit-scrollbar {
+    display: none; /* Chrome/Safari */
+}
+
+.movie-carousel-container {
+    position: relative;
+}
+
+.carousel-nav {
+    position: absolute;
+    top: 50%;
+    transform: translateY(-50%);
+    background: rgba(0,0,0,0.5);
+    color: white;
+    border: none;
+    width: 40px;
+    height: 40px;
+    border-radius: 50%;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    cursor: pointer;
+    z-index: 10;
+    transition: all 0.3s;
+}
+
+.carousel-nav:hover {
+    background: rgba(0,0,0,0.8);
+    transform: translateY(-50%) scale(1.1);
+}
+
+.movie-card {
+    transition: transform 0.3s;
+}
+
+.movie-card:hover {
+    transform: scale(1.05);
+}
