@@ -1,5 +1,12 @@
 [phases.setup]
-nixPkgs = ["php82", "php82Packages.composer", "mysql", "nodejs"]
+nixPkgs = [
+  "php82",
+  "php82Packages.composer",
+  "php82Packages.pcov",
+  "php82Packages.xdebug",
+  "mysql",
+  "nodejs"
+]
 
 [phases.install]
 cmds = [
@@ -8,8 +15,8 @@ cmds = [
 
 [phases.build]
 cmds = [
-  "php artisan config:cache",
-  "php artisan migrate --force"
+  "php artisan config:cache || true",
+  "php artisan migrate --force || true"
 ]
 
 [start]
