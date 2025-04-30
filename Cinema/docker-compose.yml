@@ -1,0 +1,42 @@
+services:
+  app:
+    build:
+      context: .
+      dockerfile: Dockerfile # Dockerfile de production
+    volumes:
+      - .:/var/www
+    ports:
+      - "8000:8000" # Laravel écoute souvent sur 8000 (pas 9000)
+
+    working_dir: /var/www
+    environment:
+      - APP_ENV=production
+      - APP_DEBUG=false
+    depends_on:
+      - mysql
+    networks:
+      - app-network
+    command: php artisan serve --host=0.0.0.0 --port=8000
+
+  mysql:
+    image: mysql:5.7
+    environment:
+      MYSQL_ROOT_PASSWORD: rootpassword
+      MYSQL_DATABASE: laravel
+      MYSQL_USER: user
+      MYSQL_PASSWORD: password
+    ports:
+      - "3306:3306"
+    networks:
+      - app-network
+
+  redis:
+    image: redis:alpine
+    ports:
+      - "6379:6379"
+    networks:
+      - app-network
+
+networks:
+  app-network:
+    driver: bridge 
