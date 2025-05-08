@@ -31,59 +31,58 @@
           @endphp
 
           @foreach(auth()->user()->client->carts as $cart)
-            @php
-              $movie = $cart->movie;
-              $subtotal = ($cart->adult * $adultPrice) 
-                        + ($cart->etudiant * $studentPrice) 
-                        + ($cart->enfant * $childPrice);
-              $total += $subtotal;
-            @endphp
+            @foreach($cart->movies as $movie)
+              @php
+                $pivot = $cart->movies->firstWhere('id', $movie->id)->pivot;
+                $subtotal = ($pivot->adult * $adultPrice) 
+                          + ($pivot->etudiant * $studentPrice) 
+                          + ($pivot->enfant * $childPrice);
+                $total += $subtotal;
+              @endphp
 
-            <div class="flex flex-col md:flex-row justify-between items-center bg-blue-50 p-4 rounded-xl shadow-sm border border-blue-100 hover:shadow-md transition-shadow">
-              <div class="flex items-center gap-4 w-full md:w-1/2">
-                <img src="{{ $movie->image_url ?? asset('images/default-movie.jpg') }}" 
-                     alt="{{ $movie->name }}" 
-                     class="w-20 h-20 object-cover rounded-lg shadow-sm">
-                <div>
-                  <h4 class="text-lg font-semibold text-gray-800">
-                    <i class="fas fa-film text-blue-500 mr-2"></i>{{ $movie->name }}
-                  </h4>
-                  <div class="mt-2">
-                    @if ($cart->adult > 0)
-                      <span class="inline-block bg-white px-2 py-1 rounded-full text-xs font-medium mr-2">
-                        <i class="fas fa-user text-gray-700 mr-1"></i> Adulte × {{ $cart->adult }}
-                      </span>
-                    @endif
-                    @if ($cart->etudiant > 0)
-                      <span class="inline-block bg-white px-2 py-1 rounded-full text-xs font-medium mr-2">
-                        <i class="fas fa-user-graduate text-blue-500 mr-1"></i> Étudiant × {{ $cart->etudiant }}
-                      </span>
-                    @endif
-                    @if ($cart->enfant > 0)
-                      <span class="inline-block bg-white px-2 py-1 rounded-full text-xs font-medium">
-                        <i class="fas fa-child text-yellow-500 mr-1"></i> Enfant × {{ $cart->enfant }}
-                      </span>
-                    @endif
+              <div class="flex flex-col md:flex-row justify-between items-center bg-blue-50 p-4 rounded-xl shadow-sm border border-blue-100 hover:shadow-md transition-shadow">
+                <div class="flex items-center gap-4 w-full md:w-1/2">
+                  <div>
+                    <h4 class="text-lg font-semibold text-gray-800">
+                      <i class="fas fa-film text-blue-500 mr-2"></i>{{ $movie->name }}
+                    </h4>
+                    <div class="mt-2">
+                      @if ($pivot->adult > 0)
+                        <span class="inline-block bg-white px-2 py-1 rounded-full text-xs font-medium mr-2">
+                          <i class="fas fa-user text-gray-700 mr-1"></i> Adulte × {{ $pivot->adult }}
+                        </span>
+                      @endif
+                      @if ($pivot->etudiant > 0)
+                        <span class="inline-block bg-white px-2 py-1 rounded-full text-xs font-medium mr-2">
+                          <i class="fas fa-user-graduate text-blue-500 mr-1"></i> Étudiant × {{ $pivot->etudiant }}
+                        </span>
+                      @endif
+                      @if ($pivot->enfant > 0)
+                        <span class="inline-block bg-white px-2 py-1 rounded-full text-xs font-medium">
+                          <i class="fas fa-child text-yellow-500 mr-1"></i> Enfant × {{ $pivot->enfant }}
+                        </span>
+                      @endif
+                    </div>
                   </div>
                 </div>
-              </div>
 
-              <div class="flex items-center justify-end w-full md:w-1/2 gap-6 mt-4 md:mt-0">
-                <div class="text-center bg-white px-4 py-2 rounded-lg shadow-sm">
-                  <p class="text-sm text-gray-500">Sous-total</p>
-                  <p class="font-medium text-blue-600">{{ number_format($subtotal, 2, ',', ' ') }} €</p>
+                <div class="flex items-center justify-end w-full md:w-1/2 gap-6 mt-4 md:mt-0">
+                  <div class="text-center bg-white px-4 py-2 rounded-lg shadow-sm">
+                    <p class="text-sm text-gray-500">Sous-total</p>
+                    <p class="font-medium text-blue-600">{{ number_format($subtotal, 2, ',', ' ') }} €</p>
+                  </div>
+                  <form action="{{ route('carts.destroy', $cart) }}" method="POST" 
+                        onsubmit="return confirm('Supprimer cet article de votre panier ?')">
+                    @csrf
+                    @method('DELETE')
+                    <button type="submit" class="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors">
+                      <i class="fas fa-trash-alt"></i>
+                      <span class="sr-only">Supprimer</span>
+                    </button>
+                  </form>
                 </div>
-                <form action="{{ route('carts.destroy', $cart) }}" method="POST" 
-                      onsubmit="return confirm('Supprimer cet article de votre panier ?')">
-                  @csrf
-                  @method('DELETE')
-                  <button type="submit" class="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors">
-                    <i class="fas fa-trash-alt"></i>
-                    <span class="sr-only">Supprimer</span>
-                  </button>
-                </form>
               </div>
-            </div>
+            @endforeach
           @endforeach
         </div>
 
@@ -99,15 +98,25 @@
           <form method="POST" action="{{ route('orders.store') }}" class="mt-6">
             @csrf
             @foreach(auth()->user()->client->carts as $cart)
-              <input type="hidden" name="cart_ids[]" value="{{ $cart->id }}">
+                @foreach($cart->movies as $movie)
+                    <input type="hidden" 
+                          name="items[{{ $cart->id }}][{{ $movie->id }}][adult]" 
+                          value="{{ $movie->pivot->adult }}">
+                    <input type="hidden" 
+                          name="items[{{ $cart->id }}][{{ $movie->id }}][etudiant]" 
+                          value="{{ $movie->pivot->etudiant }}">
+                    <input type="hidden" 
+                          name="items[{{ $cart->id }}][{{ $movie->id }}][enfant]" 
+                          value="{{ $movie->pivot->enfant }}">
+                @endforeach
             @endforeach
             <input type="hidden" name="total" value="{{ $total }}">
             
             <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">
-              <i class="fas fa-check-circle"></i>
-              Valider la commande
+                <i class="fas fa-check-circle"></i>
+                Valider la commande
             </button>
-          </form>
+        </form>
         </div>
       @endif
     </div>

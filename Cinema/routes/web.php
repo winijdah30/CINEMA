@@ -9,8 +9,7 @@ use Illuminate\Support\Facades\Route;
 
 
 Route::resource('movies', MovieController::class);
-Route::get('/home', [MovieController::class, 'index'])->name('home');
-
+Route::get('/', [MovieController::class, 'index'])->name('home');
 Route::get('/dashboard', function () {
     return view('dashboard');
 })->middleware(['auth', 'verified'])->name('dashboard');

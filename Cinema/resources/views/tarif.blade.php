@@ -1,4 +1,25 @@
 @extends('template')
+@section('navbar')
+    <a href="{{ route('home') }}" class="flex items-center">
+        <img src="{{ asset('images/home.jpg') }}" 
+             alt="Logo Nord Pitcha" 
+             class="h-16">
+    </a>
+    <ul class="flex space-x-4">
+        <li><a class="nav-link fw-bold" href="{{route('clients.cart')}}">
+            <i class="bi bi-cart"></i> Panier</a></li>  
+        <li><a href="{{route('orders.index')}}" class="text-gray-300 hover:text-white">Commandes</a></li>
+        <li><a href="#" class="text-gray-300 hover:text-white">Contact</a></li>
+        <li>
+        <form method="POST" action="{{ route('logout') }}" class="d-inline">
+            @csrf
+            <button type="submit" class="nav-link btn btn-danger px-3 rounded border-0">
+            Déconnexion
+            </button>
+        </form>
+        </li>
+    </ul>
+    @endsection
 
 @section('content')
     <div class="container mx-auto mt-8 p-6 bg-gray-800 rounded-lg shadow-lg">

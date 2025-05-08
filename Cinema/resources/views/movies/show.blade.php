@@ -41,7 +41,6 @@
     @endforeach
 
     <input type="hidden" name="movie_id" value="{{ $movie->id }}">
-    <input type="hidden" name="client_id" value="{{ auth()->user()->id }}">
 
     <button type="submit"
         class="w-full mt-6 bg-blue-600 text-white py-2 rounded-lg hover:bg-blue-700 transition-all">

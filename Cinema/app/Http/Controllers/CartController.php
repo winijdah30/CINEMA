@@ -16,42 +16,45 @@ class CartController extends Controller
     }
     
     public function store(Request $request)
-    {
-        // Récupération de l'utilisateur et de son client
-        $user = Auth::user();
-        $client = $user->client;
+{
+    $user = Auth::user();
+    $client = $user->client;
 
-        // Validation des entrées du formulaire
-        $validated = $request->validate([
-            'adult' => 'required|integer|min:0',
-            'etudiant' => 'required|integer|min:0',
-            'enfant' => 'required|integer|min:0',
-            'movie_id' => 'required|exists:movies,id',
+    $validated = $request->validate([
+        'movie_id' => 'required|exists:movies,id',
+        'adult' => 'required|integer|min:0',
+        'etudiant' => 'required|integer|min:0',
+        'enfant' => 'required|integer|min:0',
+    ]);
+
+    $cart = Cart::firstOrCreate([
+        'client_id' => $client->id,
+    ]);
+
+    $movieId = $validated['movie_id'];
+
+    $existing = $cart->movies()->where('movie_id', $movieId)->first();
+
+    if ($existing) {
+        // Mise à jour des quantités dans la table pivot
+        $cart->movies()->updateExistingPivot($movieId, [
+            'adult' => $existing->pivot->adult + $validated['adult'],
+            'etudiant' => $existing->pivot->etudiant + $validated['etudiant'],
+            'enfant' => $existing->pivot->enfant + $validated['enfant'],
         ]);
-
-        // On ajoute directement l'ID du client au tableau des données validées
-        $validated['client_id'] = $client->id;
-
-        // Vérification s'il existe déjà un panier pour ce client et ce film
-        $existingCart = Cart::where('client_id', $validated['client_id'])
-                            ->where('movie_id', $validated['movie_id'])
-                            ->first();
-
-        if ($existingCart) {
-            // Si le panier existe, on met à jour les quantités
-            $existingCart->update([
-                'adult' => $existingCart->adult + $validated['adult'],
-                'etudiant' => $existingCart->etudiant + $validated['etudiant'],
-                'enfant' => $existingCart->enfant + $validated['enfant'],
-            ]);
-        } else {
-            // Sinon, on crée un nouveau panier
-            Cart::create($validated);
-        }
-
-        // Redirection avec message de succès
-        return redirect()->route('movies.index')->with('success', '🎟️ Billets ajoutés au panier avec succès !');
+    } else {
+        // Nouvelle entrée dans la pivot
+        $cart->movies()->attach($movieId, [
+            'adult' => $validated['adult'],
+            'etudiant' => $validated['etudiant'],
+            'enfant' => $validated['enfant'],
+        ]);
     }
+
+    return redirect()->route('movies.index')->with('success', '🎟️ Billets ajoutés au panier avec succès !');
+}
+
+
     
     // Méthode pour supprimer un film du panier
     public function supprimer_panier(Cart $cart)

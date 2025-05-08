@@ -17,16 +17,17 @@ class Cart extends Model
         'etudiant',
         'enfant',
         'client_id',
-        'movie_id',
     ];
 
     public function client()
     {
         return $this->belongsTo(Client::class);
     }
-    public function movie()
+    public function movies()
     {
-        return $this->belongsTo(Movie::class);
+        return $this->belongsToMany(Movie::class)
+                    ->withPivot('adult', 'etudiant', 'enfant')
+                    ->withTimestamps();
     }
 
     public function order()

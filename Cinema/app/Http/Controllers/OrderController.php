@@ -23,122 +23,105 @@ class OrderController extends Controller
         return view('orders.list', compact('orders'));
     }
 
-    public function show(Order $order)
-    {
-        // Charger explicitement les relations
-        $order->load('cart.movie');
-        
-        if (!$order->cart) {
-            abort(404, 'Le panier associé à cette commande n\'existe pas');
-        }
-
-        return view('orders.show', compact('order'));
-    }
-
     public function store(Request $request)
     {
-        // 1. Validation des données avec messages personnalisés
         $user = Auth::user();
-        $validated = $request->validate([
-            'cart_ids' => [
-                'required',
-                'array',
-                'min:1',
-                function ($attribute, $value, $fail) use ($user) {  // Notez le use ($user)
-                    // Vérification que l'utilisateur a un client associé
-                    if (!$user->client) {
-                        $fail("Votre compte utilisateur n'est pas associé à un client.");
-                        return;
-                    }
     
-                    $validCarts = Cart::whereIn('id', $value)
-                                    ->where('client_id', $user->client->id)
-                                    ->count();
-                    
-                    if ($validCarts !== count($value)) {
-                        $fail("Un ou plusieurs paniers ne vous appartiennent pas ou n'existent plus.");
-                    }
-                }
-            ],
-            'total' => 'required|numeric|min:0'
+        if (!$user->client) {
+            return back()->withErrors(['error' => 'Compte non associé à un client']);
+        }
+    
+        $validated = $request->validate([
+            'cart_id' => ['required', 'exists:carts,id'], // Un seul panier
+            'total' => ['required', 'numeric', 'min:0']
         ]);
     
-        // 2. Constantes de prix (déclarées en haut de classe)
-        $adultPrice = 10;
-        $studentPrice = 8;
-        $childPrice = 5;
+        DB::beginTransaction();
     
         try {
-            DB::beginTransaction();
+            // 1. Récupérer le panier avec ses films
+            $cart = Cart::with('movies')
+                      ->where('id', $validated['cart_id'])
+                      ->where('client_id', $user->client->id)
+                      ->firstOrFail();
     
-            $orders = [];
-            foreach ($validated['cart_ids'] as $cartId) {
-                // 3. Vérification renforcée de propriété
-                $cart = Cart::with('movie')
-                          ->where('id', $cartId)
-                          ->where('client_id', auth()->id())
-                          ->firstOrFail();
-                
-                // 4. Calcul du prix avec vérification
-                $calculatedTotal = ($cart->adult * $adultPrice) 
-                                + ($cart->etudiant * $studentPrice) 
-                                + ($cart->enfant * $childPrice);
-                
-                if (abs($calculatedTotal - $request->total) > 0.01) {
-                    throw new \Exception("Incohérence de prix détectée");
-                }
+            // 2. Calculer le total à partir des films du panier
+            $prices = [
+                'adult' => 10,
+                'student' => 8,
+                'child' => 5
+            ];
     
-                // 5. Création de la commande
-                $order = $this->createOrder($cart, $calculatedTotal);
-                $orders[] = $order;
+            $calculatedTotal = 0;
+            foreach ($cart->movies as $movie) {
+                $calculatedTotal += ($movie->pivot->adult * $prices['adult'])
+                                 + ($movie->pivot->etudiant * $prices['student'])
+                                 + ($movie->pivot->enfant * $prices['child']);
             }
+    
+            // 3. Valider le total
+            if (abs($calculatedTotal - $validated['total']) > 0.01) {
+                throw new \Exception("Incohérence dans le calcul du total");
+            }
+    
+            // 4. Créer la commande
+            $order = Order::create([
+                'client_id' => $user->client->id,
+                'price' => $calculatedTotal,
+                'status' => 'non payé'
+            ]);
+    
+            // 5. Copier les films du panier vers la commande (via order_movie)
+            foreach ($cart->movies as $movie) {
+                $order->movies()->attach($movie->id, [
+                    'adult' => $movie->pivot->adult,
+                    'etudiant' => $movie->pivot->etudiant,
+                    'enfant' => $movie->pivot->enfant
+                ]);
+            }
+    
+            // 6. Supprimer le panier (optionnel)
+            $cart->delete();
     
             DB::commit();
     
-            return redirect()->route('orders.index')
-                           ->with('success', 'Commandes créées avec succès!');
+            return redirect()->route('orders.show', $order)
+                           ->with('success', 'Commande créée avec succès !');
     
         } catch (\Exception $e) {
             DB::rollBack();
-            Log::error('Erreur commande: '.$e->getMessage());
-            
-            return back()->with('error', $this->getErrorMessage($e));
+            Log::error('Erreur commande: ' . $e->getMessage());
+            return back()->withErrors(['error' => $e->getMessage()]);
         }
     }
-    
-    // Méthode privée pour créer une commande
-    private function createOrder(Cart $cart, float $price): Order
+
+    private function createOrder(Cart $cart, float $total): Order
     {
-        $qrContent = route('orders.show', ['order' => Str::uuid()]);
+        $order = new Order();
+        $order->cart_id = $cart->id;
+        $order->client_id = $cart->client_id;
+        $order->price = $total;
+        $order->status = 'non payé'; // Utilisez la valeur exacte de l'enum
+        $order->photo = $cart->movie->image_url ?? null;
         
-        $qrCode = QrCode::format('svg')
-                       ->size(200)
-                       ->generate($qrContent);
-    
-        $fileName = 'qrcodes/'.Str::uuid().'.svg';
-        Storage::disk('public')->put($fileName, $qrCode);
-    
-        $order = Order::create([
-            'photo' => $fileName,
-            'price' => $price,
-            'status' => 'non payé',
-            'cart_id' => $cart->id,
-            'qr_content' => $qrContent,
-        ]);
-    
-        Mail::to(auth()->user()->email)
-           ->queue(new OrderConfirmation($order));
-    
+        $order->save();
+        
         return $order;
     }
-    
-    // Gestion des messages d'erreur
-    private function getErrorMessage(\Exception $e): string
+
+    private function calculateTotal(Cart $cart): float
     {
-        return match (true) {
-            $e instanceof ModelNotFoundException => 'Panier introuvable',
-            str_contains($e->getMessage(), 'Incohérence') => 'Erreur de calcul du total',
-            default => 'Erreur lors de la commande'
-        };
+        $prices = config('prices', [
+            'adult' => 10,
+            'student' => 8,
+            'child' => 5
+        ]);
+
+        return ($cart->adult * $prices['adult'])
+            + ($cart->etudiant * $prices['student'])
+            + ($cart->enfant * $prices['child']);
+    }
+    public function show(Order $order){
+        return view('orders.show', compact('order'));
     }
 }

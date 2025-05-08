@@ -3,7 +3,7 @@
     
     @section('title', 'Bienvenue au Nord Pitcha')
     @section('navbar')
-    <a href="{{ url('home') }}" class="flex items-center">
+    <a href="{{ route('home') }}" class="flex items-center">
         <img src="{{ asset('images/home.jpg') }}" 
              alt="Logo Nord Pitcha" 
              class="h-16">
