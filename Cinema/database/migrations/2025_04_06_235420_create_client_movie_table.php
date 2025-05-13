@@ -15,6 +15,9 @@ return new class extends Migration
             $table->primary(['movie_id', 'client_id']);
             $table->foreignId('movie_id')->constrained();
             $table->foreignId('client_id')->constrained();
+            $table->integer('etudiant')->default(0);
+            $table->integer('adult')->default(0);
+            $table->integer('enfant')->default(0);
         });
     }
 

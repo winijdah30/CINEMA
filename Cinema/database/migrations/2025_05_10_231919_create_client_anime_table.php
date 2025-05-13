@@ -1,4 +1,5 @@
 <?php
+
 use Illuminate\Database\Migrations\Migration;
 use Illuminate\Database\Schema\Blueprint;
 use Illuminate\Support\Facades\Schema;
@@ -10,17 +11,13 @@ return new class extends Migration
      */
     public function up(): void
     {
-        Schema::create('cart_movie', function (Blueprint $table) {
-            $table->foreignId('movie_id')->constrained()->onDelete('cascade');
-            $table->foreignId('cart_id')->constrained()->onDelete('cascade');
-
-            $table->integer('adult')->default(0);
+        Schema::create('client_anime', function (Blueprint $table) {
+            $table->primary(['anime_id', 'client_id']);
+            $table->foreignId('anime_id')->constrained(); 
+            $table->foreignId('client_id')->constrained(); 
             $table->integer('etudiant')->default(0);
+            $table->integer('adult')->default(0);
             $table->integer('enfant')->default(0);
-
-            $table->timestamps();
-
-            $table->primary(['movie_id', 'cart_id']); // après les colonnes
         });
     }
 
@@ -29,6 +26,6 @@ return new class extends Migration
      */
     public function down(): void
     {
-        Schema::dropIfExists('cart_movie');
+        Schema::dropIfExists('client_anime');
     }
 };

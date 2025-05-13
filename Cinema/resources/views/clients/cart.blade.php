@@ -1,151 +1,169 @@
 @extends('template')
 
-@section('title') 🎟️ Mon Panier @endsection
+@section('title', '🎟️ Mon Panier')
 
-@section('content')
-<section class="min-h-screen bg-gray-100 py-10">
-  <div class="container mx-auto max-w-5xl">
-    <div class="bg-white rounded-2xl shadow-xl p-8 border border-gray-200">
-      <div class="flex justify-between items-center mb-6">
-        <a href="{{ route('movies.index') }}" class="text-blue-600 hover:underline flex items-center">
-          <i class="fas fa-arrow-left mr-2"></i> Continuer mes achats
-        </a>
-        <h1 class="text-2xl font-bold text-gray-800">Mon Panier</h1>
-      </div>
-
-      @if (auth()->user()->client->carts->isEmpty())
-        <div class="text-center py-10">
-          <i class="fas fa-shopping-cart text-4xl text-gray-300 mb-4"></i>
-          <p class="text-gray-500 text-lg">Votre panier est vide.</p>
-          <a href="{{ route('movies.index') }}" class="mt-4 inline-block bg-blue-600 text-white px-6 py-2 rounded-lg hover:bg-blue-700 transition-all">
-            Voir les films
-          </a>
-        </div>
-      @else
-        <div class="space-y-4">
-          @php
-            $total = 0;
-            $adultPrice = 10;
-            $studentPrice = 8;
-            $childPrice = 5;
-          @endphp
-
-          @foreach(auth()->user()->client->carts as $cart)
-            @foreach($cart->movies as $movie)
-              @php
-                $pivot = $cart->movies->firstWhere('id', $movie->id)->pivot;
-                $subtotal = ($pivot->adult * $adultPrice) 
-                          + ($pivot->etudiant * $studentPrice) 
-                          + ($pivot->enfant * $childPrice);
-                $total += $subtotal;
-              @endphp
-
-              <div class="flex flex-col md:flex-row justify-between items-center bg-blue-50 p-4 rounded-xl shadow-sm border border-blue-100 hover:shadow-md transition-shadow">
-                <div class="flex items-center gap-4 w-full md:w-1/2">
-                  <div>
-                    <h4 class="text-lg font-semibold text-gray-800">
-                      <i class="fas fa-film text-blue-500 mr-2"></i>{{ $movie->name }}
-                    </h4>
-                    <div class="mt-2">
-                      @if ($pivot->adult > 0)
-                        <span class="inline-block bg-white px-2 py-1 rounded-full text-xs font-medium mr-2">
-                          <i class="fas fa-user text-gray-700 mr-1"></i> Adulte × {{ $pivot->adult }}
-                        </span>
-                      @endif
-                      @if ($pivot->etudiant > 0)
-                        <span class="inline-block bg-white px-2 py-1 rounded-full text-xs font-medium mr-2">
-                          <i class="fas fa-user-graduate text-blue-500 mr-1"></i> Étudiant × {{ $pivot->etudiant }}
-                        </span>
-                      @endif
-                      @if ($pivot->enfant > 0)
-                        <span class="inline-block bg-white px-2 py-1 rounded-full text-xs font-medium">
-                          <i class="fas fa-child text-yellow-500 mr-1"></i> Enfant × {{ $pivot->enfant }}
-                        </span>
-                      @endif
-                    </div>
-                  </div>
-                </div>
-
-                <div class="flex items-center justify-end w-full md:w-1/2 gap-6 mt-4 md:mt-0">
-                  <div class="text-center bg-white px-4 py-2 rounded-lg shadow-sm">
-                    <p class="text-sm text-gray-500">Sous-total</p>
-                    <p class="font-medium text-blue-600">{{ number_format($subtotal, 2, ',', ' ') }} €</p>
-                  </div>
-                  <form action="{{ route('carts.destroy', $cart) }}" method="POST" 
-                        onsubmit="return confirm('Supprimer cet article de votre panier ?')">
-                    @csrf
-                    @method('DELETE')
-                    <button type="submit" class="text-red-500 hover:text-red-700 p-2 rounded-full hover:bg-red-50 transition-colors">
-                      <i class="fas fa-trash-alt"></i>
-                      <span class="sr-only">Supprimer</span>
-                    </button>
-                  </form>
-                </div>
-              </div>
-            @endforeach
-          @endforeach
-        </div>
-
-        <div class="mt-10 border-t border-gray-200 pt-6">
-          <div class="flex justify-between items-center">
-            <div>
-              <h3 class="text-xl font-semibold text-gray-800">Total</h3>
-              <p class="text-sm text-gray-500">TVA incluse</p>
-            </div>
-            <span class="text-2xl font-bold text-blue-600">{{ number_format($total, 2, ',', ' ') }} €</span>
-          </div>
-          
-          <form method="POST" action="{{ route('orders.store') }}" class="mt-6">
+@section('navbar')
+    <a href="{{ route('home') }}" class="flex items-center">
+        <img src="{{ asset('images/home.jpg') }}" 
+             alt="Logo Nord Pitcha" 
+             class="h-16">
+    </a>
+    <ul class="flex space-x-4">
+        <li><a href="{{route('orders.index')}}" class="text-gray-300 hover:text-white">Commandes</a></li>
+        <li><a href="#" class="text-gray-300 hover:text-white">Contact</a></li>
+        <li>
+        <form method="POST" action="{{ route('logout') }}" class="d-inline">
             @csrf
-            @foreach(auth()->user()->client->carts as $cart)
-                @foreach($cart->movies as $movie)
-                    <input type="hidden" 
-                          name="items[{{ $cart->id }}][{{ $movie->id }}][adult]" 
-                          value="{{ $movie->pivot->adult }}">
-                    <input type="hidden" 
-                          name="items[{{ $cart->id }}][{{ $movie->id }}][etudiant]" 
-                          value="{{ $movie->pivot->etudiant }}">
-                    <input type="hidden" 
-                          name="items[{{ $cart->id }}][{{ $movie->id }}][enfant]" 
-                          value="{{ $movie->pivot->enfant }}">
-                @endforeach
-            @endforeach
-            <input type="hidden" name="total" value="{{ $total }}">
-            
-            <button type="submit" class="w-full bg-green-600 hover:bg-green-700 text-white font-medium py-3 px-6 rounded-lg transition-all flex items-center justify-center gap-2">
-                <i class="fas fa-check-circle"></i>
-                Valider la commande
+            <button type="submit" class="nav-link btn btn-danger px-3 rounded border-0">
+            Déconnexion
             </button>
         </form>
-        </div>
-      @endif
-    </div>
-  </div>
-</section>
+        </li>
+    </ul>
+@endsection
 
-<!-- Modal de confirmation -->
-@if(session('order_success'))
-  <div class="fixed inset-0 bg-black bg-opacity-50 flex items-center justify-center z-50" x-data="{ show: true }" x-show="show" x-init="setTimeout(() => show = false, 5000)">
-    <div class="bg-white rounded-xl p-6 max-w-md w-full mx-4 shadow-2xl transform transition-all">
-      <div class="text-center">
-        <div class="text-green-500 text-5xl mb-4 animate-bounce">
-          <i class="fas fa-check-circle"></i>
+@section('content')
+<div class="max-w-4xl mx-auto py-10 px-4 sm:px-6 lg:px-8">
+    <div class="bg-white rounded-xl shadow-md overflow-hidden p-6">
+        <div class="flex items-center mb-8">
+            <svg xmlns="http://www.w3.org/2000/svg" class="h-10 w-10 text-indigo-600 mr-3" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M16 11V7a4 4 0 00-8 0v4M5 9h14l1 12H4L5 9z" />
+            </svg>
+            <h2 class="text-3xl font-bold text-gray-800">Votre panier</h2>
         </div>
-        <h3 class="text-xl font-semibold mb-2">Commande validée !</h3>
-        <p class="text-gray-600 mb-4">
-          Un email de confirmation a été envoyé à <span class="font-medium">{{ auth()->user()->email }}</span>.
-        </p>
-        <div class="flex justify-center gap-4">
-          <a href="{{ route('orders.index') }}" class="bg-blue-600 text-white px-4 py-2 rounded-lg hover:bg-blue-700 transition-all">
-            Mes commandes
-          </a>
-          <button @click="show = false" class="bg-gray-200 text-gray-800 px-4 py-2 rounded-lg hover:bg-gray-300 transition-all">
-            Fermer
-          </button>
-        </div>
-      </div>
-    </div>
-  </div>
-@endif
 
+        @php
+            $client = Auth::user()->client;
+            // Récupérer les films du client
+            $movies = $client->movies()->get();
+            // Récupérer les animes du client
+            $animes = $client->animes()->get();
+        @endphp
+
+        @if($movies->isEmpty() && $animes->isEmpty())
+            <div class="text-center py-12">
+                <svg xmlns="http://www.w3.org/2000/svg" class="h-16 w-16 mx-auto text-gray-400 mb-4" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 3h2l.4 2M7 13h10l4-8H5.4M7 13L5.4 5M7 13l-2.293 2.293c-.63.63-.184 1.707.707 1.707H17m0 0a2 2 0 100 4 2 2 0 000-4zm-8 2a2 2 0 11-4 0 2 2 0 014 0z" />
+                </svg>
+                <h3 class="text-xl font-medium text-gray-600 mb-2">Votre panier est vide</h3>
+                <p class="text-gray-500">Parcourez notre catalogue et ajoutez des films ou animes à votre panier</p>
+                <a href="{{ route('movies.index') }}" class="mt-4 inline-block px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-200">
+                    Explorer les films
+                </a>
+                <a href="{{ route('animes.index') }}" class="mt-4 inline-block px-6 py-2 bg-indigo-600 text-white rounded-lg hover:bg-indigo-700 transition duration-200">
+                    Explorer les animes
+                </a>
+            </div>
+        @else
+            <!-- Films -->
+            @if($movies->isNotEmpty())
+                <div class="overflow-x-auto">
+                    <h3 class="text-xl font-bold text-gray-700 mb-4">Films</h3>
+                    <table class="w-full min-w-max">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-600 uppercase text-sm leading-normal">
+                                <th class="py-3 px-6 text-left font-semibold">Titre</th>
+                                <th class="py-3 px-6 text-center font-semibold">Adulte</th>
+                                <th class="py-3 px-6 text-center font-semibold">Étudiant</th>
+                                <th class="py-3 px-6 text-center font-semibold">Enfant</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-700">
+                            @foreach ($movies as $movie)
+                                <tr class="border-b border-gray-200 hover:bg-gray-50 transition duration-150">
+                                    <td class="py-4 px-6">
+                                        <div class="flex items-center">
+                                            <div class="mr-3">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-amber-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M7 4v16M17 4v16M3 8h4m10 0h4M3 12h18M3 16h4m10 0h4M4 20h16a1 1 0 001-1V5a1 1 0 00-1-1H4a1 1 0 00-1 1v14a1 1 0 001 1z" />
+                                                </svg>
+                                            </div>
+                                            <span class="font-medium">{{ $movie->name }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-6 text-center">
+                                        <span class="bg-blue-100 text-blue-800 py-1 px-3 rounded-full text-sm">
+                                            {{ $movie->pivot->adult }}
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-6 text-center">
+                                        <span class="bg-green-100 text-green-800 py-1 px-3 rounded-full text-sm">
+                                            {{ $movie->pivot->etudiant }}
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-6 text-center">
+                                        <span class="bg-purple-100 text-purple-800 py-1 px-3 rounded-full text-sm">
+                                            {{ $movie->pivot->enfant }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+                <hr class="my-8 border-gray-300">
+            @endif
+
+            <!-- Animes -->
+            @if($animes->isNotEmpty())
+                <div class="overflow-x-auto">
+                    <h3 class="text-xl font-bold text-gray-700 mb-4">Animes</h3>
+                    <table class="w-full min-w-max">
+                        <thead>
+                            <tr class="bg-gray-50 text-gray-600 uppercase text-sm leading-normal">
+                                <th class="py-3 px-6 text-left font-semibold">Titre</th>
+                                <th class="py-3 px-6 text-center font-semibold">Adulte</th>
+                                <th class="py-3 px-6 text-center font-semibold">Étudiant</th>
+                                <th class="py-3 px-6 text-center font-semibold">Enfant</th>
+                            </tr>
+                        </thead>
+                        <tbody class="text-gray-700">
+                            @foreach ($animes as $anime)
+                                <tr class="border-b border-gray-200 hover:bg-gray-50 transition duration-150">
+                                    <td class="py-4 px-6">
+                                        <div class="flex items-center">
+                                            <div class="mr-3">
+                                                <svg xmlns="http://www.w3.org/2000/svg" class="h-6 w-6 text-indigo-500" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                                                    <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M3 5h12m4 0h2m0 14h-2M3 19h12m2 0h2a2 2 0 002-2V7a2 2 0 00-2-2h-2m-4 0H7m-4 0H1a2 2 0 00-2 2v14a2 2 0 002 2h2" />
+                                                </svg>
+                                            </div>
+                                            <span class="font-medium">{{ $anime->name }}</span>
+                                        </div>
+                                    </td>
+                                    <td class="py-4 px-6 text-center">
+                                        <span class="bg-blue-100 text-blue-800 py-1 px-3 rounded-full text-sm">
+                                            {{ $anime->pivot->adult }}
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-6 text-center">
+                                        <span class="bg-green-100 text-green-800 py-1 px-3 rounded-full text-sm">
+                                            {{ $anime->pivot->etudiant }}
+                                        </span>
+                                    </td>
+                                    <td class="py-4 px-6 text-center">
+                                        <span class="bg-purple-100 text-purple-800 py-1 px-3 rounded-full text-sm">
+                                            {{ $anime->pivot->enfant }}
+                                        </span>
+                                    </td>
+                                </tr>
+                            @endforeach
+                        </tbody>
+                    </table>
+                </div>
+            @endif
+
+            <div class="mt-8 flex justify-end">
+                <form action="{{ route('orders.store') }}" method="POST">
+                    @csrf
+                    <button type="submit" class="flex items-center px-6 py-3 bg-gradient-to-r from-indigo-600 to-purple-600 text-white font-medium rounded-lg shadow-md hover:from-indigo-700 hover:to-purple-700 transition duration-200 transform hover:scale-105">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="h-5 w-5 mr-2" fill="none" viewBox="0 0 24 24" stroke="currentColor">
+                            <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M5 13l4 4L19 7" />
+                        </svg>
+                        Valider la réservation
+                    </button>
+                </form>
+            </div>
+        @endif
+    </div>
+</div>
 @endsection

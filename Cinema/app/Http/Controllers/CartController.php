@@ -11,11 +11,13 @@ class CartController extends Controller
 {
     public function movies_client(){
         $user = Auth::user();
-        $carts = $user->client->carts;  // relation client->carts
-        return view('clients.cart', compact('carts'));
+        $client = $user->client;
+        $movies = $client->movies()->get(); 
+        $animes = $client->animes()->get(); 
+        return view('clients.cart', compact('movies', 'animes'));
     }
     
-    public function store(Request $request)
+public function store(Request $request)
 {
     $user = Auth::user();
     $client = $user->client;
@@ -27,24 +29,21 @@ class CartController extends Controller
         'enfant' => 'required|integer|min:0',
     ]);
 
-    $cart = Cart::firstOrCreate([
-        'client_id' => $client->id,
-    ]);
-
     $movieId = $validated['movie_id'];
 
-    $existing = $cart->movies()->where('movie_id', $movieId)->first();
+    // Vérifie si le film est déjà dans le panier
+    $existing = $client->movies()->where('movie_id', $movieId)->first();
 
     if ($existing) {
         // Mise à jour des quantités dans la table pivot
-        $cart->movies()->updateExistingPivot($movieId, [
+        $client->movies()->updateExistingPivot($movieId, [
             'adult' => $existing->pivot->adult + $validated['adult'],
             'etudiant' => $existing->pivot->etudiant + $validated['etudiant'],
             'enfant' => $existing->pivot->enfant + $validated['enfant'],
         ]);
     } else {
-        // Nouvelle entrée dans la pivot
-        $cart->movies()->attach($movieId, [
+        // Nouvelle ligne dans la pivot table
+        $client->movies()->attach($movieId, [
             'adult' => $validated['adult'],
             'etudiant' => $validated['etudiant'],
             'enfant' => $validated['enfant'],
@@ -53,7 +52,6 @@ class CartController extends Controller
 
     return redirect()->route('movies.index')->with('success', '🎟️ Billets ajoutés au panier avec succès !');
 }
-
 
     
     // Méthode pour supprimer un film du panier

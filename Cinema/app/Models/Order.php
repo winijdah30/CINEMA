@@ -14,19 +14,18 @@ class Order extends Model
         'photo',
         'price',
         'status',
-        'cart_id',
         'client_id'
     ];
-    public function cart(){
-        return $this->belongsTo(Cart::class);
-    }
     public function client(){
         return $this->belongsTo(Client::class);
     }
     public function movies()
     {
-        return $this->belongsToMany(Movie::class)
-                ->withPivot(['adult', 'etudiant', 'enfant'])
-                ->withTimestamps();
+        return $this->belongsToMany(Movie::class)->withPivot('adult', 'etudiant', 'enfant');
+    }
+
+    public function animes()
+    {
+        return $this->belongsToMany(Anime::class)->withPivot('adult', 'etudiant', 'enfant');
     }
 }
